@@ -12,6 +12,15 @@ pyvista = ">=0.42.0"
 tqdm = "^4.66.0"
 scikit-image = ">=0.24.0"
 
+[tool.poetry.extras]
+gpu = ["cupy-cuda12x"]  # For NVIDIA GPU acceleration (CUDA 12.x)
+
+[tool.poetry.group.gpu]
+optional = true
+
+[tool.poetry.group.gpu.dependencies]
+cupy-cuda12x = "^13.0.0"  # Adjust for your CUDA version: cupy-cuda11x, cupy-cuda12x
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

@@ -12,13 +12,26 @@ class SimulationConfig:
     time_step: float = 0.01
     resolution: int = 100  # Number of points or matrix size N
     coupling_constant: float = 1.0  # g_s or tension
+    splitting_enabled: bool = True  # Enable string splitting/joining
+    splitting_probability: float = 0.3  # Probability of split when intersection detected
+
+@dataclass(slots=True)
+class StringLoop:
+    """A single closed string loop."""
+    positions: Vector3D  # (N, 3)
+    velocities: Vector3D  # (N, 3)
+    color_id: int = 0  # For visual distinction after splits
 
 @dataclass(slots=True)
 class StringState:
-    """Instantaneous state of a Nambu-Goto string."""
-    positions: Vector3D  # (N, 3)
-    velocities: Vector3D # (N, 3)
+    """Instantaneous state of one or more Nambu-Goto strings."""
+    # Legacy single-string fields (for backward compatibility)
+    positions: Vector3D  # (N, 3) - primary loop positions
+    velocities: Vector3D  # (N, 3) - primary loop velocities
     energy: float
+    # Multi-string support
+    loops: Optional[List[StringLoop]] = None  # All string loops
+    num_loops: int = 1  # Number of active loops
 
 @dataclass(slots=True)
 class MatrixState:

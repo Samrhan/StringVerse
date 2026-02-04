@@ -3,6 +3,14 @@ import pyvista as pv
 from stringverse.core.interfaces import Renderer
 from stringverse.core.models import MatrixState
 
+# Check GPU status for HUD display
+try:
+    import cupy
+    _GPU_STATUS = "🚀 GPU"
+except ImportError:
+    _GPU_STATUS = "🐢 CPU"
+
+
 class MatrixRenderer(Renderer):
     """
     Visualization module for the BFSS Matrix Model.
@@ -49,10 +57,10 @@ class MatrixRenderer(Renderer):
         self.plotter.show_axes()
         self.plotter.camera_position = 'iso'
         
-        # HUD - Help text
+        # HUD - Help text with GPU status
         self.plotter.add_text(
-            "BFSS Matrix Model (D0-Branes)\n"
-            "─────────────────────────────\n"
+            f"BFSS Matrix Model (D0-Branes) [{_GPU_STATUS}]\n"
+            "─────────────────────────────────────\n"
             "Spheres = D0-branes (eigenvalues)\n"
             "Lines = Open strings (off-diagonal)\n"
             "[SPACE] Explosion!  [1/2/3] Switch\n"

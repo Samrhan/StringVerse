@@ -19,7 +19,7 @@ class MainController:
     def __init__(self, interactive: bool = True):
         self.config = SimulationConfig(
             time_step=0.05, 
-            resolution=50, # N=50 is good compromise for all
+            resolution=100,  # N=100 for emergent geometry (GPU) or 32 (CPU fallback)
             coupling_constant=1.0
         )
         self.interactive = interactive

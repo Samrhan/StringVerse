@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
 import numpy as np
 import numpy.typing as npt
 
@@ -26,3 +26,6 @@ class MatrixState:
     # 9 bosonic matrices X_I of size (N, N)
     matrices: List[npt.NDArray[np.complex128]] 
     eigenvalues: Vector3D # For rendering (point cloud)
+    # Off-diagonal coupling strengths for emergent geometry
+    # Shape (N, N) - connection_strength[i,j] = how strongly brane i and j are connected
+    connection_strengths: Optional[npt.NDArray[np.float64]] = None

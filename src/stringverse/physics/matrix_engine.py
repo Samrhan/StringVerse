@@ -113,6 +113,27 @@ class BFSSMatrixModel(PhysicsEngine):
         
         points = np.column_stack((x_eig, y_eig, z_eig))
         
+        # Compute connection strengths from OFF-DIAGONAL elements
+        # Large off-diagonal elements mean branes are "connected" by strings
+        # Sum |X_ij|^2 over all 3 matrices
+        connection_strengths = np.zeros((self.n_size, self.n_size), dtype=np.float64)
+        for k in range(3):
+            connection_strengths += np.abs(self.matrices[k]) ** 2
+        
+        # Zero out diagonal (self-connections don't count)
+        np.fill_diagonal(connection_strengths, 0)
+        
+        # Normalize to [0, 1]
+        max_strength = np.max(connection_strengths)
+        if max_strength > 0:
+            connection_strengths /= max_strength
+        
+        return MatrixState(
+            matrices=[m.copy() for m in self.matrices],
+            eigenvalues=points,
+            connection_strengths=connection_strengths
+        )
+        
         return MatrixState(
             matrices=[m.copy() for m in self.matrices],
             eigenvalues=points

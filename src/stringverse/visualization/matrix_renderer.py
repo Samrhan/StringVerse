@@ -6,7 +6,8 @@ from stringverse.core.models import MatrixState
 class MatrixRenderer(Renderer):
     """
     Visualization module for the BFSS Matrix Model.
-    Renders D0-branes as glowing spheres with connection lines showing interactions.
+    Renders D0-branes as spheres with connection lines showing EMERGENT GEOMETRY.
+    Connection strength comes from off-diagonal matrix elements (open strings between branes).
     """
 
     def __init__(self, interactive: bool = True) -> None:
@@ -15,7 +16,7 @@ class MatrixRenderer(Renderer):
         self.glyphs: pv.PolyData | None = None
         self.lines: pv.PolyData | None = None
         self.interactive = interactive
-        self.connection_threshold = 3.0  # Distance threshold for drawing connections
+        self.connection_threshold = 0.1  # Minimum strength to draw connection
 
     def setup_scene(self) -> None:
         self.plotter.set_background("black")
@@ -29,8 +30,8 @@ class MatrixRenderer(Renderer):
         points = np.random.randn(10, 3) * 2
         self.point_cloud = pv.PolyData(points)
         
-        # Create glowing spheres
-        sphere = pv.Sphere(radius=0.25)
+        # Create spheres (small - branes are point-like)
+        sphere = pv.Sphere(radius=0.2)
         self.glyphs = self.point_cloud.glyph(scale=False, orient=False, geom=sphere)
         
         self.plotter.add_mesh(
@@ -43,29 +44,33 @@ class MatrixRenderer(Renderer):
             name="brane_actor"
         )
         
-        # Connection lines will be added dynamically in update_actors
         self.lines = None
         
         self.plotter.show_axes()
         self.plotter.camera_position = 'iso'
 
-    def _create_connections(self, points: np.ndarray) -> pv.PolyData:
-        """Create line connections between nearby D0-branes."""
+    def _create_connections_from_matrix(self, points: np.ndarray, 
+                                         strengths: np.ndarray) -> pv.PolyData:
+        """
+        Create line connections based on off-diagonal matrix elements.
+        This shows the EMERGENT GEOMETRY from non-commutative matrices.
+        Strong connections = open strings stretched between D0-branes.
+        """
         n = len(points)
         lines = []
         line_scalars = []
         
         for i in range(n):
             for j in range(i + 1, n):
-                dist = np.linalg.norm(points[i] - points[j])
-                if dist < self.connection_threshold:
-                    lines.append([2, i, j])  # VTK line format
-                    line_scalars.append(1.0 - dist / self.connection_threshold)
+                strength = strengths[i, j]
+                if strength > self.connection_threshold:
+                    lines.append([2, i, j])
+                    line_scalars.append(strength)
         
         if lines:
             cells = np.array(lines).flatten()
             mesh = pv.PolyData(points, lines=cells)
-            mesh.cell_data["intensity"] = np.array(line_scalars)
+            mesh.cell_data["strength"] = np.array(line_scalars)
             return mesh
         else:
             return pv.PolyData()
@@ -77,18 +82,19 @@ class MatrixRenderer(Renderer):
         points = state.eigenvalues
         self.point_cloud.points = points
         
-        # Create glyphs with size based on local density
-        sphere = pv.Sphere(radius=0.25)
+        # Create spheres
+        sphere = pv.Sphere(radius=0.2)
         new_glyphs = self.point_cloud.glyph(scale=False, orient=False, geom=sphere)
         
-        # Color by position (distance from origin) for visual interest
-        distances = np.linalg.norm(points, axis=1)
+        # Color by distance from center of mass (shows clustering)
+        center = np.mean(points, axis=0)
+        distances = np.linalg.norm(points - center, axis=1)
         glyph_colors = np.repeat(distances, sphere.n_points)
         
         self.plotter.add_mesh(
             new_glyphs,
             scalars=glyph_colors,
-            cmap="cool",  # Cyan to magenta
+            cmap="cool",
             show_scalar_bar=False,
             specular=1.0,
             specular_power=20,
@@ -98,19 +104,20 @@ class MatrixRenderer(Renderer):
             reset_camera=False
         )
         
-        # Update connection lines
-        connections = self._create_connections(points)
-        if connections.n_points > 0:
-            self.plotter.add_mesh(
-                connections,
-                scalars="intensity" if "intensity" in connections.cell_data else None,
-                cmap="Blues",
-                opacity=0.4,
-                line_width=2,
-                show_scalar_bar=False,
-                name="connection_actor",
-                reset_camera=False
-            )
+        # Draw connections based on off-diagonal matrix elements
+        if state.connection_strengths is not None:
+            connections = self._create_connections_from_matrix(points, state.connection_strengths)
+            if connections.n_points > 0:
+                self.plotter.add_mesh(
+                    connections,
+                    scalars="strength",
+                    cmap="hot",  # Strong connections = bright
+                    opacity=0.6,
+                    line_width=3,
+                    show_scalar_bar=False,
+                    name="connection_actor",
+                    reset_camera=False
+                )
 
     def render_frame(self) -> None:
         self.plotter.render()

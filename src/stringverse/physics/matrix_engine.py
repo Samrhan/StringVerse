@@ -163,8 +163,3 @@ class BFSSMatrixModel(PhysicsEngine):
             eigenvalues=points,
             connection_strengths=connection_strengths
         )
-        
-        return MatrixState(
-            matrices=[m.copy() for m in self.matrices],
-            eigenvalues=points
-        )

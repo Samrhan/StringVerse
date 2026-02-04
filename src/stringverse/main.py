@@ -103,6 +103,7 @@ class MainController:
         plotter.add_key_event("1", lambda: self.request_switch("1"))
         plotter.add_key_event("2", lambda: self.request_switch("2"))
         plotter.add_key_event("3", lambda: self.request_switch("3"))
+        plotter.add_key_event("space", lambda: self.trigger_poke())
         
         # Sliders
         # We need to update self.config
@@ -142,6 +143,12 @@ class MainController:
         # We set a flag or just do it if careful.
         # Since we control the loop, it's safer to set a flag.
         self._pending_switch = mode
+
+    def trigger_poke(self):
+        """Trigger an explosion in the current physics engine (if supported)."""
+        if self.physics and hasattr(self.physics, 'poke'):
+            self.physics.poke(strength=5.0)
+            print("💥 BOOM! D0-branes excited!")
 
     def run(self):
         # Initial setup

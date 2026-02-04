@@ -86,6 +86,20 @@ class CalabiYauRenderer(Renderer):
         
         self.plotter.show_axes()
         self.plotter.camera_position = 'iso'
+        
+        # HUD - Help text
+        self.plotter.add_text(
+            "Calabi-Yau Manifold (Extra Dimensions)\n"
+            "──────────────────────────────────────\n"
+            "Fermat Quintic: Σ zᵢ⁵ = 0\n"
+            "Slider = Slice through Z dimension\n"
+            "Watch how cross-section morphs!\n"
+            "[1/2/3] Switch module  [Q] Quit",
+            position='upper_left',
+            font_size=9,
+            color='white',
+            name='hud_text'
+        )
 
     def _update_slice_plane(self) -> None:
         """Update the clipped mesh based on current slice position."""

@@ -18,6 +18,9 @@ class BFSSMatrixModel(PhysicsEngine):
         self.n_size: int = 0
         self.mass: float = 1.0 # Confinement mass term
         self.damping: float = 0.01 # Damping to prevent runaway
+        self.base_damping: float = 0.01 # Store base value for after-burn
+        self.afterburn_damping: float = 0.15 # High damping after explosion
+        self.afterburn_timer: float = 0.0 # Countdown for after-burn effect
         self.max_value: float = 50.0 # Clamp matrices to prevent overflow
 
     def initialize(self, config: SimulationConfig) -> None:
@@ -74,6 +77,15 @@ class BFSSMatrixModel(PhysicsEngine):
     def step(self, dt: float) -> None:
         if self.matrices is None or self.velocities is None:
             return
+        
+        # After-burn effect: gradually reduce damping back to normal
+        if self.afterburn_timer > 0:
+            self.afterburn_timer -= dt
+            # Smooth exponential decay from afterburn_damping to base_damping
+            t = max(0, self.afterburn_timer) / 2.0  # 2 second decay
+            self.damping = self.base_damping + (self.afterburn_damping - self.base_damping) * t
+        else:
+            self.damping = self.base_damping
 
         # Velocity Verlet with damping
         forces = self._compute_forces(self.matrices)
@@ -87,6 +99,24 @@ class BFSSMatrixModel(PhysicsEngine):
         forces_new = self._compute_forces(self.matrices)
         self.velocities += 0.5 * forces_new * dt
         self.velocities *= (1.0 - self.damping)  # Apply damping again
+
+    def poke(self, strength: float = 5.0) -> None:
+        """
+        Apply an explosive perturbation to the D0-branes.
+        Simulates injecting energy into the system.
+        Activates after-burn effect for organic settling.
+        """
+        if self.velocities is None:
+            return
+        
+        # Add random velocities (explosion)
+        for i in range(3):
+            V = np.random.randn(self.n_size, self.n_size) + 1j * np.random.randn(self.n_size, self.n_size)
+            self.velocities[i] += (V + V.conj().T) * strength
+        
+        # Activate after-burn effect
+        self.afterburn_timer = 2.0  # 2 seconds of high damping
+        self.damping = self.afterburn_damping
 
     def get_state(self) -> MatrixState:
         if self.matrices is None:

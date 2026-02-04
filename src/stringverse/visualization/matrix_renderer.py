@@ -48,6 +48,20 @@ class MatrixRenderer(Renderer):
         
         self.plotter.show_axes()
         self.plotter.camera_position = 'iso'
+        
+        # HUD - Help text
+        self.plotter.add_text(
+            "BFSS Matrix Model (D0-Branes)\n"
+            "─────────────────────────────\n"
+            "Spheres = D0-branes (eigenvalues)\n"
+            "Lines = Open strings (off-diagonal)\n"
+            "[SPACE] Explosion!  [1/2/3] Switch\n"
+            "Coupling ↑ = tighter geometry",
+            position='upper_left',
+            font_size=9,
+            color='white',
+            name='hud_text'
+        )
 
     def _create_connections_from_matrix(self, points: np.ndarray, 
                                          strengths: np.ndarray) -> pv.PolyData:

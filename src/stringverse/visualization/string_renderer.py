@@ -50,6 +50,19 @@ class StringRenderer(Renderer):
         
         self.plotter.show_axes()
         self.plotter.camera_position = 'iso'
+        
+        # HUD - Help text
+        self.plotter.add_text(
+            "Nambu-Goto Relativistic String\n"
+            "─────────────────────────────\n"
+            "Color = Velocity (bright = relativistic)\n"
+            "Slider = String Tension\n"
+            "[1/2/3] Switch module  [Q] Quit",
+            position='upper_left',
+            font_size=9,
+            color='white',
+            name='hud_text'
+        )
 
     def update_actors(self, state: StringState) -> None:
         """

@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "stringverse"
+version = "0.1.0"
+description = "Interactive String Theory Visualization"
+authors = ["Lead Engineer"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+numpy = "^2.0.0"
+scipy = "^1.14.0"
+pyvista = ">=0.42.0"
+tqdm = "^4.66.0"
+scikit-image = ">=0.24.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

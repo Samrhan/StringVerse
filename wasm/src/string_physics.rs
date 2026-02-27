@@ -168,6 +168,12 @@ impl StringSimulation {
             'outer: for i in 0..n {
                 for j in (i + 4)..n {
                     if j == n - 1 && i == 0 { continue; }
+                    // Both child segments must be large enough to survive.
+                    // Segment A: i..=j  → j - i + 1 points
+                    // Segment B: j..n + 0..=i → (n - j) + (i + 1) points
+                    let len_a = j - i + 1;
+                    let len_b = (n - j) + (i + 1);
+                    if len_a < MIN_LOOP_POINTS || len_b < MIN_LOOP_POINTS { continue; }
                     let dist = dist3d(lp.positions[i], lp.positions[j]);
                     if dist < INTERSECTION_THRESHOLD {
                         // Probabilistic split

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useWasm } from '../hooks/useWasm'
@@ -36,7 +36,8 @@ function StringLoop({ geometry, color, tubeRadius = 0.04 }) {
 export default function StringScene({ coupling, onStats }) {
   const { wasm, loading } = useWasm()
   const simRef = useRef(null)
-  const geometriesRef = useRef([])
+  // Map from colorId → TubeGeometry, so we dispose only replaced ones
+  const geoMapRef = useRef({})
   const [loops, setLoops] = useState([])
   const frameCount = useRef(0)
 
@@ -61,7 +62,6 @@ export default function StringScene({ coupling, onStats }) {
     if (!simRef.current) return
     const dt = Math.min(delta, 0.033)
 
-    // Step physics multiple times per frame for accuracy
     for (let i = 0; i < 3; i++) {
       simRef.current.step(dt / 3)
     }
@@ -77,7 +77,7 @@ export default function StringScene({ coupling, onStats }) {
     for (let li = 0; li < loopCount; li++) {
       const n = Math.round(data[dataIdx++])
       const colorId = Math.round(data[dataIdx++])
-      const velN = Math.round(velData[velIdx++])
+      velIdx++ // skip velocity n (same as n)
 
       const pts = []
       const speeds = []
@@ -96,6 +96,43 @@ export default function StringScene({ coupling, onStats }) {
       newLoops.push({ pts, speeds, colorId: colorId % LOOP_COLORS.length, n })
     }
 
+    // Build / update geometries, disposing ones no longer present
+    const geoMap = geoMapRef.current
+    const activeIds = new Set(newLoops.map(l => l.colorId))
+    for (const id of Object.keys(geoMap)) {
+      if (!activeIds.has(Number(id))) {
+        geoMap[id]?.dispose()
+        delete geoMap[id]
+      }
+    }
+
+    for (const { pts, speeds, colorId } of newLoops) {
+      if (pts.length < 3) continue
+      const curve = new THREE.CatmullRomCurve3(pts, true)
+      const tubePoints = 200
+      const tubeGeo = new THREE.TubeGeometry(curve, tubePoints, 0.05, 8, true)
+
+      // Color vertices by speed
+      const count = tubeGeo.attributes.position.count
+      const colors = new Float32Array(count * 3)
+      const maxSpeed = Math.max(...speeds, 0.001)
+      const vertsPerSegment = 9 // 8 sides + 1 repeated
+      for (let i = 0; i < count; i++) {
+        const seg = Math.floor(i / vertsPerSegment)
+        const speedIdx = Math.min(Math.floor(seg / tubePoints * pts.length), speeds.length - 1)
+        const t = Math.min(speeds[speedIdx] / maxSpeed, 1.0)
+        const base = LOOP_COLORS[colorId]
+        colors[i * 3]     = base.r + t * (1.0 - base.r)
+        colors[i * 3 + 1] = base.g * (1.0 - t * 0.7)
+        colors[i * 3 + 2] = base.b * (1.0 - t * 0.9)
+      }
+      tubeGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+
+      // Dispose previous geometry for this loop identity before replacing
+      geoMap[colorId]?.dispose()
+      geoMap[colorId] = tubeGeo
+    }
+
     frameCount.current++
     if (frameCount.current % 3 === 0) {
       onStats?.({
@@ -107,49 +144,18 @@ export default function StringScene({ coupling, onStats }) {
     setLoops(newLoops)
   })
 
-  const loopGeometries = useMemo(() => {
-    return loops.map(({ pts, speeds, colorId }) => {
-      if (pts.length < 3) return null
-
-      const curve = new THREE.CatmullRomCurve3(pts, true)
-      const tubePoints = 200
-      const tubeGeo = new THREE.TubeGeometry(curve, tubePoints, 0.05, 8, true)
-
-      // Color vertices by speed
-      const posArr = tubeGeo.attributes.position.array
-      const count = posArr.length / 3
-      const colors = new Float32Array(count * 3)
-      const maxSpeed = Math.max(...speeds, 0.001)
-
-      // Assign speed-based color per ring of vertices
-      const vertsPerSegment = 9 // 8 sides + 1 repeated
-      for (let i = 0; i < count; i++) {
-        const seg = Math.floor(i / vertsPerSegment)
-        const speedIdx = Math.min(Math.floor(seg / tubePoints * pts.length), speeds.length - 1)
-        const t = Math.min(speeds[speedIdx] / maxSpeed, 1.0)
-        const base = LOOP_COLORS[colorId]
-        colors[i * 3] = base.r + t * (1.0 - base.r)
-        colors[i * 3 + 1] = base.g * (1.0 - t * 0.7)
-        colors[i * 3 + 2] = base.b * (1.0 - t * 0.9)
-      }
-
-      tubeGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
-      return tubeGeo
-    })
-  }, [loops])
-
   if (loading) return null
 
   return (
     <group>
-      {loops.map((loop, i) => {
-        const geo = loopGeometries[i]
+      {loops.map((loop) => {
+        const geo = geoMapRef.current[loop.colorId]
         if (!geo) return null
         return (
-          <mesh key={i} geometry={geo}>
+          // key=colorId tracks loop identity across splits — stable across re-renders
+          <mesh key={loop.colorId} geometry={geo}>
             <meshStandardMaterial
               vertexColors
-              emissiveMap={null}
               emissive={LOOP_COLORS[loop.colorId]}
               emissiveIntensity={0.4}
               roughness={0.15}
